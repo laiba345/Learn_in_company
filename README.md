@@ -45,14 +45,14 @@ git push origin my-feature-branch
 git branch -d my-feature-branch
 - 删除远程分支 git push origin --delete <分支名>
 git push origin --delete my-feature-branch
-
+```
 # 3. react创建新项目
 - 先全局安装create-react-app
   - npm install -g create-react-app
 - 使用下列命令创建一个新的react项目
   - npx create-react-app my-app
-
-# 3. 本地文件如何上传到github新建的仓库
+    
+# 4. 本地文件如何上传到github新建的仓库
 将本地代码上传到 GitHub 仓库，你可以按照以下步骤操作：
 - 1. **初始化本地 Git 仓库（如果尚未初始化）**  
    如果你的本地代码还没有初始化 Git 仓库，可以使用下面的命令来初始化：
