@@ -46,6 +46,8 @@ git branch -d my-feature-branch
 - 删除远程分支 git push origin --delete <分支名>
 git push origin --delete my-feature-branch
 ```
+9. 强制将本地文件推送到具体分支
+git push origin branch_name --force
 # 3. react创建新项目
 - 先全局安装create-react-app
   - npm install -g create-react-app
