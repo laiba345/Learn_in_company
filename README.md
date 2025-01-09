@@ -91,3 +91,52 @@ git push origin branch_name --force
 
 每次更新本地代码后，重复步骤 3 和 4 来提交本地更改，然后用 `git push` 将其上传到 GitHub。
 
+# 5. 创建一个最新的vue3相关的项目
+- 安装官方的创建工具
+  - 使用命令：npm create vue@latest 一步到位即可
+## vue3项目中使用element-plus的步骤（自动导入）
+- 1. 首先使用命令：npm install element-plus --save
+- 2. 然后在main.ts中导入Element-plus，一定要导入，要不然大多数样式什么的没有用
+```
+import './assets/main.css'
+
+import { createApp } from 'vue'
+import { createPinia } from 'pinia'
+import ElementPlus from 'element-plus'
+import 'element-plus/dist/index.css'
+
+import App from './App.vue'
+import router from './router'
+
+const app = createApp(App)
+
+app.use(createPinia())
+app.use(router)
+app.use(ElementPlus)
+
+app.mount('#app')
+```
+- 3. 设置自动导入操作
+  - 首先你需要安装unplugin-vue-components 和 unplugin-auto-import这两款插件
+    - npm install -D unplugin-vue-components unplugin-auto-import
+  - 然后你需要将配置信息放到vite.config.ts中，以（vite为例,看自己的文件中，少哪些东西）
+```
+// vite.config.ts
+import { defineConfig } from 'vite'
+import AutoImport from 'unplugin-auto-import/vite'
+import Components from 'unplugin-vue-components/vite'
+import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
+
+export default defineConfig({
+  // ...
+  plugins: [
+    // ...
+    AutoImport({
+      resolvers: [ElementPlusResolver()],
+    }),
+    Components({
+      resolvers: [ElementPlusResolver()],
+    }),
+  ],
+})
+```
