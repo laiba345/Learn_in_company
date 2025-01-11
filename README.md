@@ -140,3 +140,16 @@ export default defineConfig({
   ],
 })
 ```
+# 6. 创建一个最新的react项目
+- 直接使用create-react-app来创建React项目
+  - 通过命令：npx create-react-app <your-project-name> 来创建项目
+    - 该命令弄过以后，需要自己手动选择自己需要的配置；
+  - 然后npm install； npm start即可
+- 在react项目中使用antd也是很随意的；
+  - npm install antd --save
+  - 然后在App.tsx中引入相应的组件即可
+```
+import React from 'react';
+import { Button } from 'antd';
+```
+
