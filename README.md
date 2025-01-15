@@ -152,4 +152,5 @@ export default defineConfig({
 import React from 'react';
 import { Button } from 'antd';
 ```
+# 7. 最新前端有什么新的技术吗？
 
