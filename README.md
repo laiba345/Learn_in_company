@@ -90,6 +90,8 @@ git push origin branch_name --force
    打开浏览器，访问你的 GitHub 仓库链接 `https://github.com/laiba345/DP-Star-Demo.git`，你应该能看到本地代码已成功上传到 GitHub。
 
 每次更新本地代码后，重复步骤 3 和 4 来提交本地更改，然后用 `git push` 将其上传到 GitHub。
+- 注意
+  - 在拉取远程分支上的东西的时候，需要先将本地的代码进行上传；
 
 # 5. 创建一个最新的vue3相关的项目
 - 安装官方的创建工具
