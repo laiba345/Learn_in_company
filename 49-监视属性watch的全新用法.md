@@ -25,3 +25,19 @@ watch: {
 }
 监视操作是实时的
 ```
+# 监视数据的变化
+- 我们还可以以此来监视数据的变化；
+```
+userInputMultiSelect: {
+  deep: true,
+  handler(newVal) {
+    this.$nextTick(() => {
+      newVal.forEach((_, index) => {
+        if (this.likesAllMultiOptions(index)) {
+          this.closeSelectMenu(index);
+        }
+      });
+    });
+  }
+},
+```
