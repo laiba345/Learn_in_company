@@ -1,0 +1,16 @@
+# cookie和LocalStorage的区别
+- 数据生命周期
+  - Cookie：其生命周期可以通过expires或max - age属性来设置。**若设置了过期时间，那么在到达该时间之前，Cookie 会一直存在**；若未设置，则在当前会话结束时（即关闭浏览器），Cookie 会被清除。
+  - LocalStorage：除非手动调用removeItem、clear方法 或者 通过代码删除，，又或者用户主动清除浏览器缓存，否则数据会一直存储在浏览器中。
+- 数据大小
+  - Cookie：一般来说，每个域名下的 Cookie 存储容量限制在 4KB 左右。
+  - LocalStorage：存储容量相对较大，通常每个域名下有 5MB 左右的存储空间。
+- 数据传输
+  - Cookie：会在每次 HTTP 请求时，将存储的数据发送到服务器端。这就可能导致不必要的带宽浪费，并且还存在安全风险，比如容易遭受 CSRF 攻击。
+  - LocalStorage：数据仅存储在浏览器端，不会随 HTTP 请求发送到服务器，因此不会造成额外的带宽消耗。
+- 数据访问
+  - Cookie：可以通过document.cookie来访问和修改，不过其操作相对复杂，因为它存储的是一个以分号分隔的字符串，需要手动解析。
+  - LocalStorage：提供了简单的API来进行访问操作；
+- 5. 作用域
+  - Cookie：可以通过设置path和domain属性来控制其作用域，这样就能在不同的路径和域名下共享数据。
+  - LocalStorage：数据的作用域是基于域名的，不同域名下的LocalStorage数据是相互隔离的。
