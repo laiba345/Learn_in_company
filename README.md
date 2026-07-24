@@ -4,6 +4,9 @@ git init
 git remote add origin http:...
 输入gitlab账号和密码
 git pull origin 分支名
+
+删除远程分支的操作
+git push origin --delete 分支名
 ```
 # 2. 分支的相关操作
 1. 拉取新项目；克隆到本地
