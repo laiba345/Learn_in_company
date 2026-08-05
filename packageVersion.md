@@ -567,3 +567,761 @@ export default {
 }
 </style>
 ```
+# CellLock
+```
+<template>
+  <v-layout row wrap>
+    <v-flex xl12 pa-0>
+      <div style="margin-top: -8px;">
+        <span class="FontH3">Cell Lock</span>
+      </div>
+      <v-layout justify-end class="mb-3" style="margin-top: 10px;">
+        <div style="width: 300px;">
+        <v-text-field
+          solo
+          clearable
+          class="hidden-sm-and-down MacManageSearch"
+          v-model="search"
+          placeholder="Server Name / IP Address"
+          @keyup.enter="comfirmSearch = search"
+        >
+          <template slot="append">
+            <button id="searchButton">
+            <i
+              class="iconfont icon-search"
+              style="font-size:18px"
+              @click="comfirmSearch = search"
+            ></i>
+            </button>
+          </template>
+        </v-text-field>
+        </div>
+        <v-spacer></v-spacer>
+        <v-btn v-if="macAccess" color="primary" class="btn_content" @click="add">Add</v-btn>
+      </v-layout>
+      <v-card flat style="margin-top: -20px;">
+        <v-data-table
+          :headers="headers"
+          :items="desserts"
+          :pagination.sync="pagination"
+          :rows-per-page-items="[15, 50, 100, 200, 500, 1000]"
+          :total-items="totalDesserts"
+          class="elevation-1 BlockOffsetTable ThemeTable TableNumber"
+          :hide-actions="hidePage"
+        >
+          <template v-slot:headers="props">
+            <tr class="text-md-left">
+              <th>{{ props.headers[0].text }}</th>
+              <th :class="['column sortable', pagination.descending ? 'desc' : 'asc', props.headers[1].value === pagination.sortBy ? 'active' : '']" @click="changeSort(props.headers[1].value)">
+                <v-icon small>arrow_upward</v-icon>
+                {{ props.headers[1].text }}
+              </th>
+              <th :class="['column sortable', pagination.descending ? 'desc' : 'asc', props.headers[2].value === pagination.sortBy ? 'active' : '']" @click="changeSort(props.headers[2].value)">
+                <v-icon small>arrow_upward</v-icon>
+                {{ props.headers[2].text }}
+              </th>
+              <th style="padding-right: 100px;">{{ props.headers[3].text }}</th>
+              <th>{{ props.headers[4].text }}</th>
+              <!-- <th style="padding-right: 60px;">{{ props.headers[5].text }}</th> -->
+              <th>
+                {{ props.headers[5].text }}
+                <v-tooltip bottom>
+                  <template v-slot:activator="{ on }">
+                  <v-icon small v-on="on" style="cursor: pointer;">info</v-icon>
+                  </template>
+                  <span>Consider A as F</span>
+                </v-tooltip>
+              </th>
+              <th>{{ props.headers[6].text }}</th>
+              <th>{{ props.headers[7].text }}</th>
+            </tr>
+          </template>
+          <template slot="items" slot-scope="props">
+            <tr>
+              <td>{{ props.item.id }}</td>
+              <td style="padding-left: 43px;">{{ props.item.serverName }}</td>
+              <td style="padding-left: 43px;">
+                <div class="ServerIpAddress">
+                  <span @click="goNewUrl(props.item.ipAddress)">{{ props.item.ipAddress }}</span>
+                </div>
+              </td>
+              <td>
+                <el-switch v-if="macAccess && admin" v-model="props.item.cell_lock" active-color="#9d4edc" @change="switchChange(props)"></el-switch>
+                <span v-else> {{ props.item.cell_lock ? 'Enabled' : 'Disabled' }}</span>
+              </td>
+              <td style="padding: 10px">
+              <div v-if="macAccess && admin" style="width: 300px">
+                <v-select
+                  class="changeSelect"
+                  @change="selectChange(props)"
+                  v-model="props.item.locking_mechanism"
+                  :disabled="!props.item.cell_lock || !macAccess || !admin"
+                  :items="LockingMechanism"
+                  chips
+                  multiple
+                  outline
+                  color="#9d4edc"
+                  :menu-props="{ bottom: true, offsetY: true,}"
+                  dense
+                  @blur="blurChange(props)"
+                >
+                </v-select>
+              </div>
+              <div v-else style="padding-left: 14px; padding-right: 14px;">
+                <div v-for="(item, i) in props.item.locking_mechanism" :key="i">
+                  {{ item }}
+                </div>
+              </div>
+              </td>
+              <td>
+                <v-checkbox 
+                  label="Abort"
+                  color="#9d4edc"
+                  hide-details
+                  v-model="props.item.isAbort" 
+                  @change="abortChange(props)"
+                  :disabled="!macAccess || !admin || !props.item.cell_lock"
+                >
+                </v-checkbox>
+              </td>
+              <td>{{ props.item.updated ? props.item.updated.replace('T', ' ').split('.')[0] : '--' }}</td>
+              <td>{{ props.item.username }}</td>
+            </tr>
+          </template>
+          <template slot="actions-append">
+            <div style="display: flex;align-items: center;">
+              <span class="mx-4">{{ startPage }}-{{ endPage }} of {{ totalDesserts }}</span>
+              <v-pagination v-model="pageIndex" :length="pages" :total-visible="5"></v-pagination>
+              <span class="mx-1">Go to</span>
+              <v-select v-model="pageIndex" outline dense class="SelectBlockOffset" :items="pagesCount" style="width:80px;margin-right:10px;" :menu-props="{ bottom: true, offsetY: true }"></v-select>
+            </div>
+          </template>
+        </v-data-table>
+        <json-to-excel :jsonData="desserts" excelName="Cell Lock Setting"></json-to-excel>
+      </v-card>
+    </v-flex>
+    <add-cell-lock ref="addcell" @updateList="updateList"></add-cell-lock>
+  </v-layout>
+</template>
+
+<script>
+import JsonToExcel from '@/pages/gac/components/JsonToExcel.vue';
+import AddCellLock from '@/pages/gac/components/RuleSeting/AddCellLock.vue'; 
+import { serverList, updateServerList, lockingMechanismList } from '@/pages/gac/api/cellLock';
+
+export default {
+  components: {
+    JsonToExcel,
+    AddCellLock
+  },
+  data() {
+    return {
+      pagination: {
+        rowsPerPage: 15, 
+        // descending: true,
+        sortBy: 'serverName'
+      },
+      headers: [
+        {
+          text: 'ID',
+          value: 'id',
+          sortable: false,
+        },
+        {
+          text: 'Server Name',
+          value: 'serverName',
+        },
+        {
+          text: 'IP Address',
+          value: 'ipAddress',
+        },
+        {
+          text: 'Cell Lock',
+          value: 'CellLock',
+          sortable: false,
+        },
+        {
+          text: 'Locking Mechanism',
+          value: 'LockingMechanism',
+          sortable: false,
+        },
+        {
+          text: 'Abort option',
+          value: 'isAbort',
+          sortable: false,
+        },
+        {
+          text: 'Edit Time',
+          value: 'updated',
+          sortable: false,
+        },
+        {
+          text: 'Username',
+          value: 'username',
+          sortable: false,
+        },
+      ],
+      desserts: [],
+      service: 'get-cell-lock-rule', 
+      LockingMechanism: [],
+      hidePage: false,
+      name: '',
+      macAccess: false,
+      admin: false,
+      tabreq: {
+        page_size: 'all',
+      },
+      totalDesserts: 0,
+      pages: 0,
+      pageIndex: 1,
+      sortByName: 'serverName',
+      // searchList: [],
+      startPage: 0,
+      endPage: 0,
+      checktab: 0,
+      search: '',
+      comfirmSearch: '',
+    };
+  },
+  computed: {
+    pagesCount() {
+      return Array.from({ length: this.pages }, (_, index) => index + 1);
+    },
+  },
+  watch: {
+    desserts: {
+      handler() {
+        // eslint-disable-next-line no-unused-expressions
+        this.totalDesserts > 5 ? this.hidePage = false : this.hidePage = true;
+      },
+      immediate: true,
+      deep: true,
+    },
+    comfirmSearch(val) {
+      this.tabreq.query = val;
+      this.pageIndex = 1;
+      this.getDataFromApi(this.pagination.rowsPerPage, this.pageIndex, this.sortByName);
+    },
+    search(newVal, oldVal) {
+      if (oldVal && !newVal) {
+        this.comfirmSearch = '';
+      }
+    },
+    'pagination': {
+      handler (val) {
+        const { sortBy, descending, page, rowsPerPage } = val;
+        this.pageIndex = 1;
+        this.getDataFromApi(rowsPerPage, page, this.sortByName);
+      },
+    },
+    pageIndex: {
+      handler(val) {
+        this.getDataFromApi(this.pagination.rowsPerPage, val, this.sortByName);
+      }
+    },
+    sortByName: {
+      handler(val) {
+        this.getDataFromApi(this.pagination.rowsPerPage, this.pageIndex, val);
+      }
+    },
+  },
+  mounted() {
+    let username = this.$cookies.get('username');
+    let role = this.$cookies.get('role');
+    this.macAccess = role === 'engineer' ? true : false;
+    if (username !== 'engineer') {
+      this.name = username.split('(')[1].slice(0, -1);
+    } else {
+      this.name = username;
+    }
+    this.admin = Buffer.from(this.$cookies.get('admin'), 'base64').toString('utf-8') === 'true' ? true : false;
+    // eslint-disable-next-line no-unused-expressions
+    this.pagination.descending ? this.tabreq.order_rule = 'DESC' : this.tabreq.order_rule = 'ASC';
+    this.getDataFromApi(this.pagination.rowsPerPage, this.pageIndex, this.sortByName);
+    this.getLockingMechanismList(); 
+  },
+  methods: {
+    async getDataFromApi (page_size, page_index, sortBy) {
+      this.tabreq.page_size = page_size;
+      this.tabreq.page_index = page_index;
+      if (sortBy === 'serverName' || sortBy === 'ipAddress') {
+        // eslint-disable-next-line no-unused-expressions
+        sortBy === 'serverName' ? this.tabreq.order_by = 'serverName' : this.tabreq.order_by = 'ipAddress';
+      }
+      const { data: res } = await serverList(this.tabreq);
+      if (!res.status) {
+        return this.$emit('showErrorMessage', res);
+      }
+      const { data: datas } = res.payload;
+      // eslint-disable-next-line array-callback-return
+      datas.server_list.map((item) => {
+        // eslint-disable-next-line no-unused-expressions
+        item.cell_lock === 0 ? item.cell_lock = false : item.cell_lock = true;
+        if (item.locking_mechanism) {
+          item.locking_mechanism = item.locking_mechanism.split(',');
+        } else {
+          item.locking_mechanism = [];
+        }
+        item.isAbort = item.show_abort === 1;
+      });
+      this.desserts = datas.server_list;
+      this.totalDesserts = datas.res_count;
+      this.pages = datas.page_num;
+      this.startPage = datas.res_start;
+      this.endPage = datas.res_end;
+    },
+    // Abort Checkbox 状态变更处理
+    async abortChange(row) {
+      const parms = {};
+      parms.show_abort = row.item.isAbort ? 1 : 0;
+      parms.ipAddress = row.item.ipAddress;
+      parms.username = this.name;
+      parms.cell_lock = row.item.cell_lock ? 1 : 0;
+      parms.locking_mechanism = row.item.locking_mechanism.join();
+      const { data: res } = await updateServerList(parms);
+      if (!res.status) {
+        this.getDataFromApi(this.pagination.rowsPerPage, this.pageIndex, this.sortByName);
+        return this.$emit('showErrorMessage', res);
+      }
+      this.getDataFromApi(this.pagination.rowsPerPage, this.pageIndex, this.sortByName);
+      this.$message({
+        showClose: true,
+        message: res.payload.message || 'Update Successfully',
+        type: 'success'
+      });
+    },
+
+    // 设置表头只有升序和降序
+    changeSort (column) {
+      if (column === 'serverName' || column === 'ipAddress') {
+        this.pagination.sortBy = column;
+        this.sortByName = column;
+        this.pagination.descending = !this.pagination.descending;
+        // eslint-disable-next-line no-unused-expressions
+        this.pagination.descending ? this.tabreq.order_rule = 'DESC' : this.tabreq.order_rule = 'ASC';
+        this.getDataFromApi(this.pagination.rowsPerPage, this.pageIndex, this.sortByName);
+      }
+    },
+    // 跳转
+    goNewUrl(IP) {
+      let url = 'https://' + IP;
+      window.open(url, '_blank');
+    },
+    async switchChange(row) {
+      const parms = {};
+      if (row.item.cell_lock) {
+        if (!row.item.locking_mechanism.includes('Failed three times continuous')) {
+          row.item.locking_mechanism.push('Failed three times continuous');
+        }
+      } else {
+        row.item.locking_mechanism = [];
+      }
+      // eslint-disable-next-line no-unused-expressions
+      row.item.cell_lock === true ? parms.cell_lock = 1 : parms.cell_lock = 0;
+      parms.show_abort = row.item.isAbort ? 1 : 0;
+      parms.locking_mechanism = row.item.locking_mechanism.join();
+      parms.ipAddress = row.item.ipAddress;
+      parms.username = this.name;
+      const { data: res } = await updateServerList(parms);
+      if (!res.status) {
+        this.getDataFromApi(this.pagination.rowsPerPage, this.pageIndex, this.sortByName);
+        return this.$emit('showErrorMessage', res);
+      }
+      // this.getTabList();
+      this.getDataFromApi(this.pagination.rowsPerPage, this.pageIndex, this.sortByName);
+      this.$message({
+        showClose: true,
+        message: 'Update Successfully',
+        type: 'success'
+      });
+    },
+    async selectChange(row) {
+      const parms = {};
+      parms.cell_lock = 1;
+      parms.locking_mechanism = row.item.locking_mechanism.join();
+      parms.ipAddress = row.item.ipAddress;
+      parms.username = this.name;
+      parms.show_abort = row.item.isAbort ? 1 : 0;
+      const { data: res } = await updateServerList(parms);
+      if (!res.status) {
+        this.getDataFromApi(this.pagination.rowsPerPage, this.pageIndex, this.sortByName);
+        return this.$emit('showErrorMessage', res);
+      }
+      // this.getTabList();
+      this.getDataFromApi(this.pagination.rowsPerPage, this.pageIndex, this.sortByName);
+      this.$message({
+        showClose: true,
+        message: 'Update Successfully',
+        type: 'success'
+      });
+    },
+    async blurChange(row) {
+      if (row.item.locking_mechanism.length <= 0) {
+        row.item.locking_mechanism = ['Failed three times continuous'];
+        const parms = {};
+        parms.cell_lock = 1;
+        parms.locking_mechanism = row.item.locking_mechanism.join();
+        parms.ipAddress = row.item.ipAddress;
+        parms.username = this.name;
+        parms.show_abort = row.item.isAbort ? 1 : 0;
+        const { data: res } = await updateServerList(parms);
+        if (!res.status) {
+          this.getDataFromApi(this.pagination.rowsPerPage, this.pageIndex, this.sortByName);
+          return this.$emit('showErrorMessage', res);
+        }
+        // this.getTabList();
+        this.getDataFromApi(this.pagination.rowsPerPage, this.pageIndex, this.sortByName);
+        this.$message({
+          showClose: true,
+          message: 'Update Successfully',
+          type: 'success'
+        });
+      }
+    },
+    // 获取表格中id为 Locking Mechanism中的列表数据
+    async getLockingMechanismList() {
+      const { data: res } = await lockingMechanismList({ service: this.service }); 
+      if (res.status) {
+        this.LockingMechanism = res.payload.data.rule_list; 
+      } 
+    }, 
+    add() {
+      this.$refs.addcell.showDialogs(this.name);
+    },
+    updateList(data) {
+      if (!data.status) {
+        this.$message({
+          showClose: true,
+          message: data.payload.message,
+          type: 'error',
+          duration: 0,
+          customClass: 'custom-long-message'
+        });
+        return;
+      }
+      this.getDataFromApi(
+        this.pagination.rowsPerPage,
+        1,
+        this.sortByName
+      );
+      this.$message({
+        showClose: true,
+        message: data.payload.message,
+        type: 'success'
+      });
+    }
+  }
+};
+</script>
+
+<style lang="stylus" scoped>
+/deep/ .theme--light.v-label {
+  font-size: 14px; 
+  color: #000000DE !important;
+}
+</style>
+```
+# CellAbort
+```
+<template>
+  <v-layout row wrap>
+    <v-flex xl12 pa-0>
+    <div style="margin-top: -8px;">
+      <span class="FontH3">Cell Abort</span>
+    </div>
+    <v-layout justify-end class="mb-3" style="margin-top: 10px;">
+      <div style="width: 300px;">
+        <v-text-field
+          solo
+          clearable
+          class="hidden-sm-and-down MacManageSearch"
+          v-model="search"
+          placeholder="Server Name / IP Address"
+          @keyup.enter="comfirmSearch = search"
+        >
+          <template slot="append">
+            <button id="searchButton">
+              <i
+                class="iconfont icon-search"
+                style="font-size:18px"
+                @click="comfirmSearch = search"
+              ></i>
+            </button>
+          </template>
+        </v-text-field>
+      </div>
+      <v-spacer></v-spacer>
+      <v-btn v-if="macAccess" color="primary" class="btn_content" @click="add">Add</v-btn>
+    </v-layout>
+    <v-card flat style="margin-top: -20px;">
+      <v-data-table
+        :headers="headers"
+        :items="desserts"
+        :pagination.sync="pagination"
+        :rows-per-page-items="[15, 50, 100, 200, 500, 1000]"
+        :total-items="totalDesserts"
+        class="elevation-1 BlockOffsetTable ThemeTable TableNumber"
+        :hide-actions="hidePage"
+      >
+        <template v-slot:headers="props">
+        <tr class="text-md-left">
+          <th>{{props.headers[0].text}}</th>
+          <th :class="['column sortable', pagination.descending ? 'desc' : 'asc', props.headers[1].value === pagination.sortBy ? 'active' : '']" @click="changeSort(props.headers[1].value)">
+            <v-icon small>arrow_upward</v-icon>
+            {{props.headers[1].text}}
+          </th>
+          <th :class="['column sortable', pagination.descending ? 'desc' : 'asc', props.headers[2].value === pagination.sortBy ? 'active' : '']" @click="changeSort(props.headers[2].value)">
+          <v-icon small>arrow_upward</v-icon>
+          {{props.headers[2].text}}
+          </th>
+          <th>{{props.headers[3].text}}</th>
+          <th>{{props.headers[4].text}}</th>
+          <th>{{props.headers[5].text}}</th>
+        </tr>
+        </template>
+        <template slot="items" slot-scope="props">
+        <tr>
+          <td>{{ props.item.id }}</td>
+          <td style="padding-left: 43px;">{{ props.item.serverName }}</td>
+          <td style="padding-left: 43px;">
+            <div class="ServerIpAddress">
+              <span @click="goNewUrl(props.item.ipAddress)">{{ props.item.ipAddress }}</span>
+            </div>
+          </td>
+          <td>
+            <el-switch v-if="macAccess && admin" v-model="props.item.abort" active-color="#9d4edc" @change="switchChange(props)"></el-switch>
+            <span v-else> {{ props.item.abort ? 'Enabled' : 'Disabled' }}</span>
+          </td>
+          <td>{{ props.item.modified.replace('T', ' ').split('.')[0] }}</td>
+          <td>{{ props.item.username }}</td>
+        </tr>
+        </template>
+        <template slot="actions-append">
+          <div style="display: flex; align-items: center;">
+            <span class="mx-4">{{startPage}}-{{endPage}} of {{totalDesserts}}</span>
+            <v-pagination v-model="pageIndex" :length="pages" :total-visible="5"></v-pagination>
+            <span class="mx-1">Go to</span>
+            <v-select v-model="pageIndex" outline dense class="SelectBlockOffset" :items="pagesCount" style="width: 80px; margin-right: 10px;" :menu-props="{ bottom: true, offsetY: true }"></v-select>
+          </div>
+        </template>
+      </v-data-table>
+      <json-to-excel :jsonData="desserts" excelName="Abort Permission List"></json-to-excel>
+    </v-card>
+    </v-flex>
+    <add-cell-lock ref="addcell" @updateList="updateList"></add-cell-lock>
+  </v-layout>
+</template>
+
+<script>
+import JsonToExcel from '@/pages/gac/components/JsonToExcel.vue';
+import AddCellLock from '@/pages/gac/components/RuleSeting/AddCellLock.vue'; 
+import { getopabortList, updateAbortList } from '@/pages/gac/api/cellLock';
+
+export default {
+  components: {
+    JsonToExcel,
+    AddCellLock
+  },
+  data() {
+    return {
+      pagination: {
+        rowsPerPage: 15, 
+        // descending: true,
+        sortBy: 'serverName'
+      },
+      headers: [
+        {
+          text: 'ID',
+          value: 'id',
+          sortable: false,
+        },
+        {
+          text: 'Server Name',
+          value: 'serverName',
+        },
+        {
+          text: 'IP Address',
+          value: 'ipAddress',
+        },
+        {
+          text: 'OP Abort Permission',
+          value: 'abort',
+          sortable: false,
+        },
+        {
+          text: 'Edit Time',
+          value: 'created',
+          sortable: false,
+        },
+        {
+          text: 'Username',
+          value: 'username',
+          sortable: false,
+        },
+      ],
+      desserts: [],
+      hidePage: false,
+      name: '',
+      macAccess: false,
+      admin: false,
+      tabreq: {
+        page_size: 'all',
+      },
+      totalDesserts: 0,
+      pages: 0,
+      pageIndex: 1,
+      sortByName: 'serverName',
+      // searchList: [],
+      startPage: 0,
+      endPage: 0,
+      checktab: 0, 
+      search: '',
+      comfirmSearch: '',
+    };
+  },
+  computed: {
+    pagesCount() {
+      return Array.from({ length: this.pages }, (_, index) => index + 1);
+    },
+  },
+  watch: {
+    desserts: {
+      handler() {
+        // eslint-disable-next-line no-unused-expressions
+        this.totalDesserts > 15 ? this.hidePage = false : this.hidePage = true;
+      },
+      immediate: true,
+      deep: true,
+    },
+    comfirmSearch(val) {
+      this.tabreq.query = val;
+      this.pageIndex = 1;
+      this.getDataFromApi(this.pagination.rowsPerPage, this.pageIndex, this.sortByName);
+    },
+    search(newVal, oldVal) {
+      if (oldVal && !newVal) {
+        this.comfirmSearch = '';
+      }
+    },
+    'pagination': {
+      handler (val) {
+        const { sortBy, descending, page, rowsPerPage } = val;
+        this.pageIndex = 1;
+        this.getDataFromApi(rowsPerPage, page, this.sortByName);
+      },
+    },
+    pageIndex: {
+      handler(val) {
+        this.getDataFromApi(this.pagination.rowsPerPage, val, this.sortByName);
+      }
+    },
+    sortByName: {
+      handler(val) {
+        this.getDataFromApi(this.pagination.rowsPerPage, this.pageIndex, val);
+      }
+    },
+  },
+  mounted() {
+    let username = this.$cookies.get('username');
+    let role = this.$cookies.get('role');
+    this.macAccess = role === 'engineer' ? true : false;
+    if (username !== 'engineer') {
+      this.name = username.split('(')[1].slice(0, -1);
+    } else {
+      this.name = username;
+    }
+    this.admin = Buffer.from(this.$cookies.get('admin'), 'base64').toString('utf-8') === 'true' ? true : false;
+    // eslint-disable-next-line no-unused-expressions
+    this.pagination.descending ? this.tabreq.order_rule = 'DESC' : this.tabreq.order_rule = 'ASC';
+    this.getDataFromApi(this.pagination.rowsPerPage, this.pageIndex, this.sortByName);
+  },
+  methods: {
+    async getDataFromApi (page_size, page_index, sortBy) {
+      this.tabreq.page_size = page_size;
+      this.tabreq.page_index = page_index;
+      if (sortBy === 'serverName' || sortBy === 'ipAddress') {
+        // eslint-disable-next-line no-unused-expressions
+        sortBy === 'serverName' ? this.tabreq.order_by = 'serverName' : this.tabreq.order_by = 'ipAddress';
+      }
+      const { data: res } = await getopabortList(this.tabreq);
+      if (!res.status) {
+        // eslint-disable-next-line no-return-assign, no-sequences
+        return this.$emit('showErrorMessage', res);
+      }
+      const { data: datas } = res.payload;
+      // eslint-disable-next-line array-callback-return
+      datas.server_list.map((item) => {
+        // eslint-disable-next-line no-unused-expressions
+        item.abort === 0 ? item.abort = false : item.abort = true;
+      });
+      this.desserts = datas.server_list;
+      this.totalDesserts = datas.res_count;
+      this.pages = datas.page_num;
+      this.startPage = datas.res_start;
+      this.endPage = datas.res_end;
+    },
+    // 设置表头只有升序和降序
+    changeSort (column) {
+      if (column === 'serverName' || column === 'ipAddress') {
+        this.pagination.sortBy = column;
+        this.sortByName = column;
+        this.pagination.descending = !this.pagination.descending;
+        // eslint-disable-next-line no-unused-expressions
+        this.pagination.descending ? this.tabreq.order_rule = 'DESC' : this.tabreq.order_rule = 'ASC';
+        this.getDataFromApi(this.pagination.rowsPerPage, this.pageIndex, this.sortByName);
+      }
+    },
+    // 跳转
+    goNewUrl(IP) {
+      let url = 'https://' + IP;
+      window.open(url, '_blank');
+    },
+    async switchChange(row) {
+      const parms = {};
+      // eslint-disable-next-line no-unused-expressions
+      row.item.abort === true ? parms.OP_Authority = 1 : parms.OP_Authority = 0;
+      parms.ipAddress = row.item.ipAddress;
+      parms.username = this.name;
+      const { data: res } = await updateAbortList(parms);
+      if (!res.status) {
+        this.getDataFromApi(this.pagination.rowsPerPage, this.pageIndex, this.sortByName);
+        return this.$emit('showErrorMessage', res);
+      }
+      // this.getTabList();
+      this.getDataFromApi(this.pagination.rowsPerPage, this.pageIndex, this.sortByName);
+      this.$message({
+        showClose: true,
+        message: 'Update Successfully',
+        type: 'success'
+      });
+    },
+    add() {
+      this.$refs.addcell.showDialogs(this.name);
+    },
+    updateList(data) {
+      if (!data.status) {
+        this.$message({
+          showClose: true,
+          message: data.payload.message,
+          type: 'error',
+          duration: 0,
+          customClass: 'custom-long-message'
+        });
+        return;
+      }
+      this.getDataFromApi(
+        this.pagination.rowsPerPage,
+        1,
+        this.sortByName
+      );
+      this.$message({
+        showClose: true,
+        message: data.payload.message,
+        type: 'success'
+      });
+    }
+  }
+};
+</script>
+```
+
