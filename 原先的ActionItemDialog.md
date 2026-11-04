@@ -1309,3 +1309,260 @@ export default {
   margin-left 12px
 </style>
 ```
+# 原先的ActionDetailDialog.vue代码
+```
+<template>
+  <v-dialog
+    :value="visible"
+    max-width="1040"
+    persistent
+    @input="onDialogInput"
+  >
+    <v-card color="#f8fafc">
+      <v-card-title class="action-dialog-title d-flex align-center">
+        <span class="action-dialog-name">{{ form.task_title }}</span>
+        <v-checkbox
+          v-model="form.status"
+          true-value="Closed"
+          false-value="Open"
+          dense
+          hide-details
+          class="action-dialog-checkbox"
+        />
+        <v-spacer />
+        <v-btn icon class="action-dialog-close" @click="close">
+          <v-icon>mdi-close</v-icon>
+        </v-btn>
+      </v-card-title>
+
+      <v-card-text class="action-dialog-content action-detail-dialog-content">
+        <v-row no-gutters class="action-detail-meta">
+          <v-col cols="12" md="4" class="action-detail-meta-item">
+            <span>Owner:</span>
+            <strong>{{ form.owner_chinese_name || item.owner_english_name || '--' }}</strong>
+          </v-col>
+          <v-col cols="12" md="4" class="action-detail-meta-item action-detail-due-date">
+            <span>Due Date:</span>
+            <el-date-picker
+              v-model="form.due_date"
+              type="date"
+              format="yyyy.MM.dd"
+              value-format="yyyy-MM-dd"
+              placeholder="Select a date..."
+              :clearable="false"
+              class="action-detail-date-picker"
+            />
+          </v-col>
+        </v-row>
+
+        <div class="action-form-field action-detail-description mb-0">
+          <label class="dialog-field-label">Description:</label>
+          <v-textarea
+            v-model="form.task_content"
+            outlined
+            rows="5"
+            no-resize
+            hide-details
+            background-color="white"
+            placeholder="Enter description..."
+          />
+        </div>
+      </v-card-text>
+
+      <v-divider />
+
+      <v-card-actions class="action-dialog-actions">
+        <v-spacer />
+        <v-btn outlined class="standard-action-button" @click="close">
+          Cancel
+        </v-btn>
+        <v-btn
+          color="primary"
+          depressed
+          class="standard-action-button ml-4"
+          :loading="loading"
+          :hasProjectMember="!hasProjectMember"
+          @click="handleSave"
+        >
+          Save
+        </v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+</template>
+
+<script>
+import { DatePicker } from 'element-ui';
+
+const EMPTY_FORM = Object.freeze({
+  task_title: null,
+  task_content: null,
+  owner_id: null,
+  owner_chinese_name: null,
+  owner_english_name: null,
+  due_date: null,
+  status: 'Open',
+});
+
+export default {
+  name: 'ActionDetailDialog',
+
+  components: {
+    elDatePicker: DatePicker,
+  },
+
+  props: {
+    visible: {
+      type: Boolean,
+      default: false,
+    },
+    item: {
+      type: Object,
+      default: () => ({}),
+    },
+    loading: {
+      type: Boolean,
+      default: false,
+    },
+    hasProjectMember: {
+      type: Boolean,
+      default: true,
+    },
+  },
+
+  data () {
+    return {
+      form: this.createEmptyForm(),
+    };
+  },
+
+  watch: {
+    visible(val) {
+      if (val) {
+        this.form = this.createFormFromItem(this.item);
+      } else {
+        this.form = this.createEmptyForm();
+      }
+    },
+    form: {
+      handler (newVal, oldVal) {
+        console.log('form changed:', newVal, 'old==>', oldVal);
+      },
+      deep: true,
+    },
+  },
+
+  methods: {
+    createEmptyForm () {
+      return { ...EMPTY_FORM };
+    },
+
+    createFormFromItem (item = {}) {
+      return {
+        ...this.createEmptyForm(),
+        ...item,
+      };
+    },
+
+    onDialogInput (val) {
+      if (!val) {
+        this.close();
+      }
+    },
+
+    close () {
+      this.$emit('update:visible', false);
+    },
+
+    handleSave () {
+      this.$emit('save', { ...this.form });
+    },
+  },
+};
+</script>
+
+<style lang="stylus" scoped>
+.standard-action-button
+  min-width 100px !important
+  font-weight 600
+  letter-spacing 0
+  text-transform none
+
+.action-dialog-title
+  padding 20px 24px 12px
+  color #17202a
+  font-size 25px
+  font-weight 700
+
+.action-dialog-name
+  overflow hidden
+  text-overflow ellipsis
+  white-space nowrap
+
+.action-dialog-checkbox
+  flex 0 0 auto
+  margin 0 0 0 20px
+  padding 0
+
+.action-dialog-close
+  background #edf0f4
+
+.action-detail-meta-item
+  display flex
+  align-items center
+  color #17202a
+  font-size 16px
+
+  &:first-child
+    padding-left 0
+
+  span
+    flex 0 0 auto
+    margin-right 18px
+    color #657087
+
+  strong
+    font-weight 500
+
+.action-detail-due-date
+  padding-right 0
+
+::v-deep .action-detail-date-picker .el-input__inner
+  height 40px
+  background #fff
+  color #17202a
+  line-height 40px
+  border 1px solid #c8d1df
+  border-radius 6px
+  font-size 16px
+  font-weight 500
+
+::v-deep .action-detail-date-picker .el-input__icon
+  line-height 40px
+
+.action-detail-description .dialog-field-label
+  color #657087
+  font-weight 400
+
+::v-deep .action-detail-description textarea
+  color #17202a
+  font-size 16px
+  line-height 1.6
+
+.action-form-field
+  margin-bottom 6px
+
+.dialog-field-label
+  display block
+  margin-bottom 7px
+  color #17202a
+  font-size 15px
+  font-weight 700
+
+.action-dialog-actions
+  padding 18px 24px
+
+.action-detail-date-picker
+  width 100% !important
+</style>
+```
